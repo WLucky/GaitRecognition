@@ -2,14 +2,15 @@ import os
 import os.path as osp
 import torch.utils.data as tordata
 from PIL import Image
+from torchvision.transforms import transforms
+
 
 
 class DataSet(tordata.Dataset):
-    def __init__(self, dataset_root, cache, transform):
+    def __init__(self, dataset_root, cache = False, transform = None):
         self.dataset_root = dataset_root
         self.__dataset_parser()
         self.cache = cache
-        self.transform = transform
         self.label_list = [seq_info[0] for seq_info in self.seqs_info]
         self.types_list = [seq_info[1] for seq_info in self.seqs_info]
         self.views_list = [seq_info[2] for seq_info in self.seqs_info]
@@ -22,6 +23,13 @@ class DataSet(tordata.Dataset):
         self.indices_dict = {label: [] for label in self.label_set}
         for i, seq_info in enumerate(self.seqs_info):
             self.indices_dict[seq_info[0]].append(i)
+
+        if transform == None:
+            self.transform = transforms.Compose([
+                transforms.ToTensor() 
+            ])
+        else:
+            self.transform = transform
 
         if self.cache:
             self.__load_all_data()
