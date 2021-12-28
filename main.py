@@ -43,8 +43,8 @@ def run_model(cfgs, training):
     msg_mgr.log_info(model_cfg)
     Model = getattr(models, model_cfg['model'])
     model = Model(cfgs, training)
-    if training and cfgs['trainer_cfg']['sync_BN']:
-        model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    # if training and cfgs['trainer_cfg']['sync_BN']:
+        # model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
     # model = get_ddp_module(model)
     msg_mgr.log_info(params_count(model))
     msg_mgr.log_info("Model Initialization Finished!")
