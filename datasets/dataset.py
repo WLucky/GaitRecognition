@@ -3,7 +3,7 @@ import pickle
 import os.path as osp
 import torch.utils.data as tordata
 import json
-from utils import get_msg_mgr
+from util_tools import get_msg_mgr
 
 
 class DataSet(tordata.Dataset):

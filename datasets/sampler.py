@@ -1,6 +1,5 @@
 import math
 import torch
-import torch.distributed as dist
 import torch.utils.data as tordata
 
 # Triplet  三次随机
@@ -10,9 +9,6 @@ class TripletSampler(tordata.sampler.Sampler):
         self.dataset = dataset
         self.batch_size = batch_size
         self.batch_shuffle = batch_shuffle
- 
-        self.world_size = dist.get_world_size()
-        self.rank = dist.get_rank()
 
     def __iter__(self):
         while True:

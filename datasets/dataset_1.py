@@ -3,7 +3,10 @@ import pickle
 import os.path as osp
 import torch.utils.data as tordata
 import json
-from utils import get_msg_mgr
+from util_tools import get_msg_mgr
+import torch.utils.data as tordata
+from PIL import Image
+from torchvision.transforms import transforms
 
 
 class DataSet(tordata.Dataset):
@@ -25,6 +28,10 @@ class DataSet(tordata.Dataset):
         self.indices_dict = {label: [] for label in self.label_set}
         for i, seq_info in enumerate(self.seqs_info):
             self.indices_dict[seq_info[0]].append(i)
+
+        # 先用最普通的transform  后续改进
+        self.transform = transforms.Compose([transforms.ToTensor()])
+
         if self.cache:
             self.__load_all_data()
 
@@ -35,15 +42,12 @@ class DataSet(tordata.Dataset):
         paths = sorted(paths)
         data_list = []
         for pth in paths:
-            if pth.endswith('.pkl'):
-                with open(pth, 'rb') as f:
-                    _ = pickle.load(f)
-                f.close()
+            if pth.endswith('.png'):
+                image = Image.open(pth)  # 读取到的是RGB， W, H, C
+                image = self.transform(image)  # transform转化image为：C, H, W
             else:
-                raise ValueError('- Loader - just support .pkl !!!')
-            # if len(_) >= 200:
-            #     _ = _[:200]
-            data_list.append(_)
+                raise ValueError('- Loader - just support .png !!!')
+            data_list.append(image)
         for data in data_list:
             if len(data) != len(data_list[0]):
                 raise AssertionError
@@ -79,8 +83,11 @@ class DataSet(tordata.Dataset):
         label_list = os.listdir(dataset_root)
         train_set = [label for label in train_set if label in label_list]
         test_set = [label for label in test_set if label in label_list]
-        miss_pids = [label for label in label_list if label not in (
-            train_set + test_set)]
+        # 未使用的label
+        miss_pids = [
+            label for label in label_list
+            if label not in (train_set + test_set)
+        ]
         msg_mgr = get_msg_mgr()
 
         def log_pid_list(pid_list):
@@ -104,19 +111,26 @@ class DataSet(tordata.Dataset):
             seqs_info_list = []
             for lab in label_set:
                 for typ in sorted(os.listdir(osp.join(dataset_root, lab))):
-                    for vie in sorted(os.listdir(osp.join(dataset_root, lab, typ))):
+                    for vie in sorted(
+                            os.listdir(osp.join(dataset_root, lab, typ))):
                         seq_info = [lab, typ, vie]
                         seq_path = osp.join(dataset_root, *seq_info)
                         seq_dirs = sorted(os.listdir(seq_path))
                         if seq_dirs != []:
-                            seq_dirs = [osp.join(seq_path, dir)
-                                        for dir in seq_dirs]
+                            seq_dirs = [
+                                osp.join(seq_path, dir) for dir in seq_dirs
+                            ]
+                            # data_in_use 是图片的可用序列
                             if data_in_use is not None:
-                                seq_dirs = [dir for dir, use_bl in zip(
-                                    seq_dirs, data_in_use) if use_bl]
+                                seq_dirs = [
+                                    dir for dir, use_bl in zip(
+                                        seq_dirs, data_in_use) if use_bl
+                                ]
                             seqs_info_list.append([*seq_info, seq_dirs])
                         else:
-                            msg_mgr.log_debug('Find no .pkl file in %s-%s-%s.'%(lab, typ, vie))
+                            msg_mgr.log_debug(
+                                'Find no .png file in %s-%s-%s.' %
+                                (lab, typ, vie))
             return seqs_info_list
 
         self.seqs_info = get_seqs_info_list(

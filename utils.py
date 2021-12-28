@@ -6,6 +6,7 @@ import torch.optim as optim
 from torch.cuda.amp import GradScaler
 import os.path as osp
 from tqdm import tqdm
+import pdb
 
 
 import datasets.sampler as Samplers
@@ -177,7 +178,7 @@ def inference(model, test_loader, cfgs):
 
 def run_test(model, cfgs):
     """Accept the instance object(model) here, and then run the test loop."""
-    test_loader = get_loader(cfgs['data_cfg'], train = False)
+    test_loader = get_loader(cfgs, train = False)
 
     with torch.no_grad():
         info_dict = inference(model, test_loader, cfgs)
@@ -208,12 +209,13 @@ def run_train(model, cfgs, training = True):
     loss_aggregator = LossAggregator(cfgs['loss_cfg'])
     Scaler = GradScaler()
     optimizer = get_optimizer(model, cfgs['optimizer_cfg'])
-    scheduler = get_scheduler(cfgs['scheduler_cfg'])
+    # pdb.set_trace()
+    scheduler = get_scheduler(optimizer, cfgs['scheduler_cfg'])
 
     save_path = osp.join('output/', cfgs['data_cfg']['dataset_name'],
                                   cfgs['model_cfg']['model'], engine_cfg['save_name'])
 
-    dataloader = get_loader(cfgs['data_cfg'], training)
+    dataloader = get_loader(cfgs, training)
 
     iteration = 0
     for inputs in dataloader:

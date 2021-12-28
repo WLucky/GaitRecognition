@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
-from utils import get_msg_mgr
+from util_tools import get_msg_mgr
 
 
 def cuda_dist(x, y, metric='euc'):
