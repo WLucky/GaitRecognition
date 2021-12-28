@@ -1,0 +1,1 @@
+python datasets/pretreatment.py --input_path data/train --output_path data/train_pkl
