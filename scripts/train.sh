@@ -7,7 +7,7 @@
 
 # # GaitPart
 #  --gpu_ids -1 for mac
-python -u main.py --cfgs ./config/gaitpart.yaml --phase train
+python -u main.py --cfgs ./config/gaitpart.yaml --phase train --log_to_file
 
 # GaitGL
 # CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 lib/main.py --cfgs ./config/gaitgl.yaml --phase train

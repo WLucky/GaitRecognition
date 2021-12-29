@@ -159,7 +159,9 @@ def inference(model, test_loader, cfgs):
             retval = model.forward(ipts)
             inference_feat = retval['inference_feat']
             for k, v in inference_feat.items():
-                inference_feat[k] = ddp_all_gather(v, requires_grad=False)
+                # inference_feat[k] = ddp_all_gather(v, requires_grad=False)
+                inference_feat[k] = v
+
             del retval
         for k, v in inference_feat.items():
             inference_feat[k] = ts2np(v)
@@ -226,8 +228,9 @@ def run_train(model, cfgs, training = True):
             del retval
         loss_sum, loss_info = loss_aggregator(training_feat)
         ok = train_step(optimizer, scheduler, Scaler, loss_sum, engine_cfg)
-        iteration += 1
-        if not ok:
+        if ok:
+            iteration += 1
+        else:
             continue
 
         visual_summary.update(loss_info)
