@@ -38,7 +38,9 @@ class LossAggregator():
         Loss = get_attr_from([losses], loss_cfg['type'])
         valid_loss_arg = get_valid_args(
             Loss, loss_cfg, ['type', 'gather_and_scale'])
-        loss = get_ddp_module(Loss(**valid_loss_arg).cuda())
+        # loss = get_ddp_module(Loss(**valid_loss_arg).cuda())
+        loss = Loss(**valid_loss_arg).cuda()
+
         return loss
 
     def __call__(self, training_feats):

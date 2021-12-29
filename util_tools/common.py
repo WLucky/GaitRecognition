@@ -103,8 +103,8 @@ def ts2np(x):
 
 
 def ts2var(x, **kwargs):
-    # return autograd.Variable(x, **kwargs).cuda()
-    return autograd.Variable(x, **kwargs)
+    return autograd.Variable(x, **kwargs).cuda()
+    # return autograd.Variable(x, **kwargs)
 
 
 
