@@ -243,7 +243,7 @@ def run_train(model, cfgs, training = True):
             if engine_cfg['with_test']:
                 msg_mgr.log_info("Running test...")
                 model.eval()
-                result_dict = run_test(model)
+                result_dict = run_test(model, cfgs)
                 model.train()
                 msg_mgr.write_to_tensorboard(result_dict)
                 msg_mgr.reset_time()
