@@ -61,10 +61,10 @@ trainer_cfg:
   log_iter: 100
   restore_ckpt_strict: true
   restore_hint: 0
-  save_iter: 10000
+  save_iter: 2000
   save_name: GaitPart
   sync_BN: false
-  total_iter: 120000
+  total_iter: 14000 #120000
   sampler:
     batch_shuffle: false
     batch_size:
