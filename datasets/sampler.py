@@ -65,6 +65,8 @@ class InferenceSampler(tordata.sampler.Sampler):
             indx_batch.append(
                 indices[i*batch_size: (i+1)*batch_size])
 
+        self.indx_batch = indx_batch
+
     def __iter__(self):
         yield from self.indx_batch
 
