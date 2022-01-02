@@ -90,7 +90,7 @@ class GaitPart(nn.Module):
         self.Head = SeparateFCs(parts_num=16, in_channels=128, out_channels=128)
         self.Backbone = SetBlockWrapper(self.Backbone)
         self.HPP = SetBlockWrapper(
-            HorizontalPoolingPyramid(bin_num=16))
+            HorizontalPoolingPyramid(bin_num=[16]))
         self.TFA = PackSequenceWrapper(TemporalFeatureAggregator(
             in_channels=128, parts_num=16))
         
