@@ -220,6 +220,7 @@ def run_train(model, cfgs, training = True):
     dataloader = get_loader(cfgs, training)
 
     iteration = 0
+    model.train()
     for inputs in dataloader:
         ipts = inputs_pretreament(inputs, training, cfgs)
         with autocast(enabled=engine_cfg['enable_float16']):

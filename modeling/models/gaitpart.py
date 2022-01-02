@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from ..base_model import BaseModel
 from ..modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs
+from ..modules import BasicConv2d, FocalConv2d
 from util_tools import clones
 
 
@@ -43,6 +43,7 @@ class TemporalFeatureAggregator(nn.Module):
         # Temporal Pooling, TP
         self.TP = torch.max
 
+
     def forward(self, x):
         """
           Input:  x,   [n, s, c, p]
@@ -77,7 +78,7 @@ class TemporalFeatureAggregator(nn.Module):
         return ret
 
 
-class GaitPart(BaseModel):
+class GaitPart(nn.Module):
     def __init__(self, *args, **kargs):
         super(GaitPart, self).__init__(*args, **kargs)
         """
@@ -85,18 +86,43 @@ class GaitPart(BaseModel):
             Paper:    https://openaccess.thecvf.com/content_CVPR_2020/papers/Fan_GaitPart_Temporal_Part-Based_Model_for_Gait_Recognition_CVPR_2020_paper.pdf
             Github:   https://github.com/ChaoFan96/GaitPart
         """
-
-    def build_network(self, model_cfg):
-
-        self.Backbone = self.get_backbone(model_cfg['backbone_cfg'])
-        head_cfg = model_cfg['SeparateFCs']
-        self.Head = SeparateFCs(**model_cfg['SeparateFCs'])
+        self.Backbone = self.get_backbone()
+        self.Head = SeparateFCs(parts_num=16, in_channels=128, out_channels=128)
         self.Backbone = SetBlockWrapper(self.Backbone)
         self.HPP = SetBlockWrapper(
-            HorizontalPoolingPyramid(bin_num=model_cfg['bin_num']))
+            HorizontalPoolingPyramid(bin_num=16))
         self.TFA = PackSequenceWrapper(TemporalFeatureAggregator(
-            in_channels=head_cfg['in_channels'], parts_num=head_cfg['parts_num']))
+            in_channels=128, parts_num=16))
+        
+        self.init_parameters()
 
+    def get_backbone(self):
+        layers = [BasicConv2d(1, 32, kernel_size=5, stride=1, padding=2), nn.LeakyReLU(inplace=True)]
+        layers += [BasicConv2d(32, 32, kernel_size=3, stride=1, padding=1), nn.LeakyReLU(inplace=True)]
+        layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        layers += [FocalConv2d(32, 64, kernel_size=3, stride=1, padding=1, halving=2), nn.LeakyReLU(inplace=True)]
+        layers += [FocalConv2d(64, 64, kernel_size=3, stride=1, padding=1, halving=2), nn.LeakyReLU(inplace=True)]
+        layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        layers += [FocalConv2d(64, 128, kernel_size=3, stride=1, padding=1, halving=3), nn.LeakyReLU(inplace=True)]
+        layers += [FocalConv2d(128, 128, kernel_size=3, stride=1, padding=1, halving=3), nn.LeakyReLU(inplace=True)]
+
+        return nn.Sequential(*layers)
+
+    def init_parameters(self):
+        for m in self.modules():
+            if isinstance(m, (nn.Conv3d, nn.Conv2d, nn.Conv1d)):
+                nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias.data, 0.0)
+            elif isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias.data, 0.0)
+            elif isinstance(m, (nn.BatchNorm3d, nn.BatchNorm2d, nn.BatchNorm1d)):
+                if m.affine:
+                    nn.init.normal_(m.weight.data, 1.0, 0.02)
+                    nn.init.constant_(m.bias.data, 0.0)
+     
     def forward(self, inputs):
         ipts, labs, _, _, seqL = inputs
 
@@ -125,3 +151,6 @@ class GaitPart(BaseModel):
             }
         }
         return retval
+
+def gaitPart():
+    return GaitPart()

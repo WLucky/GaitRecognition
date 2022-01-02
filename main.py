@@ -1,9 +1,11 @@
 
 import os
 import argparse
+from threading import get_ident
 import torch
 import torch.nn as nn
 from modeling import models
+from modeling.models.gaitpart import gaitPart
 from util_tools import config_loader, get_ddp_module, init_seeds, params_count, get_msg_mgr
 from utils import run_train, run_test
 
@@ -41,11 +43,10 @@ def run_model(cfgs, training):
     msg_mgr = get_msg_mgr()
     model_cfg = cfgs['model_cfg']
     msg_mgr.log_info(model_cfg)
-    Model = getattr(models, model_cfg['model'])
-    model = Model(cfgs, training)
-    # if training and cfgs['trainer_cfg']['sync_BN']:
-        # model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    # model = get_ddp_module(model)
+    # Model = getattr(models, model_cfg['model'])
+    # model = Model(cfgs, training)
+    model = gaitPart()
+    model.cuda()
     msg_mgr.log_info(params_count(model))
     msg_mgr.log_info("Model Initialization Finished!")
 
