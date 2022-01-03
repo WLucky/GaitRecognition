@@ -1,0 +1,1 @@
+python -u main.py --dataset_root ./data/train_pkl --log_to_file

@@ -38,7 +38,7 @@ def de_diag(acc, each_angle=False):
 # Modified From https://github.com/AbnerHqC/GaitSet/blob/master/model/utils/evaluator.py
 
 
-def identification(data, dataset, metric='euc'):
+def identification(data, metric='euc'):
     msg_mgr = get_msg_mgr()
 
     feature, label, seq_type, view = data['embeddings'], data['labels'], data['types'], data['views']
@@ -48,26 +48,22 @@ def identification(data, dataset, metric='euc'):
     view_num = len(view_list)
     # sample_num = len(feature)
 
-    probe_seq_dict = {'CASIA-B': [['nm-05', 'nm-06'], ['bg-01', 'bg-02'], ['cl-01', 'cl-02']],
-                      'OUMVLP': [['00']]}
+    probe_seq = [['nm-05', 'nm-06'], ['bg-01', 'bg-02'], ['cl-01', 'cl-02']]
+    gallery_seq = [['nm-01', 'nm-02', 'nm-03', 'nm-04']]
 
-    gallery_seq_dict = {'CASIA-B': [['nm-01', 'nm-02', 'nm-03', 'nm-04']],
-                        'OUMVLP': [['01']]}
-    if dataset not in (probe_seq_dict or gallery_seq_dict):
-        raise KeyError("DataSet %s hasn't been supported !" % dataset)
     num_rank = 5
-    acc = np.zeros([len(probe_seq_dict[dataset]),
+    acc = np.zeros([len(probe_seq),
                    view_num, view_num, num_rank]) - 1.
-    for (p, probe_seq) in enumerate(probe_seq_dict[dataset]):
-        for gallery_seq in gallery_seq_dict[dataset]:
+    for (p, probe) in enumerate(probe_seq):
+        for gallery in gallery_seq:
             for (v1, probe_view) in enumerate(view_list):
                 for (v2, gallery_view) in enumerate(view_list):
-                    gseq_mask = np.isin(seq_type, gallery_seq) & np.isin(
+                    gseq_mask = np.isin(seq_type, gallery) & np.isin(
                         view, [gallery_view])
                     gallery_x = feature[gseq_mask, :]
                     gallery_y = label[gseq_mask]
 
-                    pseq_mask = np.isin(seq_type, probe_seq) & np.isin(
+                    pseq_mask = np.isin(seq_type, probe) & np.isin(
                         view, [probe_view])
                     probe_x = feature[pseq_mask, :]
                     probe_y = label[pseq_mask]
@@ -78,38 +74,31 @@ def identification(data, dataset, metric='euc'):
                         np.sum(np.cumsum(np.reshape(probe_y, [-1, 1]) == gallery_y[idx[:, 0:num_rank]], 1) > 0,
                                0) * 100 / dist.shape[0], 2)
     result_dict = {}
-    if 'OUMVLP' not in dataset:
-        for i in range(1):
-            msg_mgr.log_info(
-                '===Rank-%d (Include identical-view cases)===' % (i + 1))
-            msg_mgr.log_info('NM: %.3f,\tBG: %.3f,\tCL: %.3f' % (
-                np.mean(acc[0, :, :, i]),
-                np.mean(acc[1, :, :, i]),
-                np.mean(acc[2, :, :, i])))
-        for i in range(1):
-            msg_mgr.log_info(
-                '===Rank-%d (Exclude identical-view cases)===' % (i + 1))
-            msg_mgr.log_info('NM: %.3f,\tBG: %.3f,\tCL: %.3f' % (
-                de_diag(acc[0, :, :, i]),
-                de_diag(acc[1, :, :, i]),
-                de_diag(acc[2, :, :, i])))
-        result_dict["scalar/test_accuracy/NM"] = acc[0, :, :, i]
-        result_dict["scalar/test_accuracy/BG"] = acc[1, :, :, i]
-        result_dict["scalar/test_accuracy/CL"] = acc[2, :, :, i]
-        np.set_printoptions(precision=2, floatmode='fixed')
-        for i in range(1):
-            msg_mgr.log_info(
-                '===Rank-%d of each angle (Exclude identical-view cases)===' % (i + 1))
-            msg_mgr.log_info('NM: {}'.format(de_diag(acc[0, :, :, i], True)))
-            msg_mgr.log_info('BG: {}'.format(de_diag(acc[1, :, :, i], True)))
-            msg_mgr.log_info('CL: {}'.format(de_diag(acc[2, :, :, i], True)))
-    else:
-        msg_mgr.log_info('===Rank-1 (Include identical-view cases)===')
-        msg_mgr.log_info('NM: %.3f ' % (np.mean(acc[0, :, :, 0])))
-        msg_mgr.log_info('===Rank-1 (Exclude identical-view cases)===')
-        msg_mgr.log_info('NM: %.3f ' % (np.mean(de_diag(acc[0, :, :, 0]))))
-        result_dict["scalar/test_accuracy/NM"] = np.mean(
-            de_diag(acc[0, :, :, 0]))
+    for i in range(1):
+        msg_mgr.log_info(
+            '===Rank-%d (Include identical-view cases)===' % (i + 1))
+        msg_mgr.log_info('NM: %.3f,\tBG: %.3f,\tCL: %.3f' % (
+            np.mean(acc[0, :, :, i]),
+            np.mean(acc[1, :, :, i]),
+            np.mean(acc[2, :, :, i])))
+    for i in range(1):
+        msg_mgr.log_info(
+            '===Rank-%d (Exclude identical-view cases)===' % (i + 1))
+        msg_mgr.log_info('NM: %.3f,\tBG: %.3f,\tCL: %.3f' % (
+            de_diag(acc[0, :, :, i]),
+            de_diag(acc[1, :, :, i]),
+            de_diag(acc[2, :, :, i])))
+    result_dict["scalar/test_accuracy/NM"] = acc[0, :, :, i]
+    result_dict["scalar/test_accuracy/BG"] = acc[1, :, :, i]
+    result_dict["scalar/test_accuracy/CL"] = acc[2, :, :, i]
+    np.set_printoptions(precision=2, floatmode='fixed')
+    for i in range(1):
+        msg_mgr.log_info(
+            '===Rank-%d of each angle (Exclude identical-view cases)===' % (i + 1))
+        msg_mgr.log_info('NM: {}'.format(de_diag(acc[0, :, :, i], True)))
+        msg_mgr.log_info('BG: {}'.format(de_diag(acc[1, :, :, i], True)))
+        msg_mgr.log_info('CL: {}'.format(de_diag(acc[2, :, :, i], True)))
+
     return result_dict
 
 

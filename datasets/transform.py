@@ -49,15 +49,3 @@ class BaseRgbTransform():
     def __call__(self, x):
         return (x - self.mean) / self.std
 
-
-def get_transform(trf_cfg=None):
-    if is_dict(trf_cfg):
-        transform = getattr(base_transform, trf_cfg['type'])
-        valid_trf_arg = get_valid_args(transform, trf_cfg, ['type'])
-        return transform(**valid_trf_arg)
-    if trf_cfg is None:
-        return lambda x: x
-    if is_list(trf_cfg):
-        transform = [get_transform(cfg) for cfg in trf_cfg]
-        return transform
-    raise "Error type for -Transform-Cfg-"

@@ -3,11 +3,16 @@ import random
 import numpy as np
 from util_tools import get_msg_mgr
 
+####config
+frames_num_fixed = 30
+frames_num_max = 50
+frames_num_min = 25
+frames_skip_num = 10
+
 # 根据batch数据继续操作 返回到数据给网络
 class CollateFn(object):
-    def __init__(self, label_set, sample_config):
+    def __init__(self, label_set, sample_type):
         self.label_set = label_set
-        sample_type = sample_config['sample_type']
         sample_type = sample_type.split('_')
         self.sampler = sample_type[0]
         self.ordered = sample_type[1]
@@ -19,19 +24,19 @@ class CollateFn(object):
 
         # fixed cases
         if self.sampler == 'fixed':
-            self.frames_num_fixed = sample_config['frames_num_fixed']
+            self.frames_num_fixed = frames_num_fixed
 
         # unfixed cases
         if self.sampler == 'unfixed':
-            self.frames_num_max = sample_config['frames_num_max']
-            self.frames_num_min = sample_config['frames_num_min']
+            self.frames_num_max = frames_num_max
+            self.frames_num_min = frames_num_min
 
         if self.sampler != 'all' and self.ordered:
-            self.frames_skip_num = sample_config['frames_skip_num']
+            self.frames_skip_num = frames_skip_num
 
         self.frames_all_limit = -1
-        if self.sampler == 'all' and 'frames_all_limit' in sample_config:
-            self.frames_all_limit = sample_config['frames_all_limit']
+        # if self.sampler == 'all' and 'frames_all_limit' in sample_config:
+        #     self.frames_all_limit = sample_config['frames_all_limit']
 
     def __call__(self, batch):
         batch_size = len(batch)
