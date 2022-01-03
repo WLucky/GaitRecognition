@@ -10,8 +10,6 @@ from utils import *
 
 
 parser = argparse.ArgumentParser(description='Main program')
-parser.add_argument('--cfgs', type=str,
-                    default='config/default.yaml', help="path of config file")
 ############################## data config ##############################
 parser.add_argument('--cache', action='store_true', help="cache the dataset")
 parser.add_argument('--dataset_root', type=str, help='location of the data corpus', required=True)
