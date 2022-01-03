@@ -7,13 +7,13 @@ from util_tools import get_msg_mgr
 
 
 class DataSet(tordata.Dataset):
-    def __init__(self, data_cfg, training):
+    def __init__(self, dataset_root, training, dataset_partition, cache = False):
         """
             seqs_info: the list with each element indicating 
                             a certain gait sequence presented as [label, type, view, paths];
         """
-        self.__dataset_parser(data_cfg, training)
-        self.cache = data_cfg['cache']
+        self.__dataset_parser(dataset_root, training, dataset_partition)
+        self.cache = cache
         # seq_info: label type views [paths ..]
         self.label_list = [seq_info[0] for seq_info in self.seqs_info]
         self.types_list = [seq_info[1] for seq_info in self.seqs_info]
@@ -67,14 +67,11 @@ class DataSet(tordata.Dataset):
         for idx in range(len(self)):
             self.__getitem__(idx)
 
-    def __dataset_parser(self, data_config, training):
-        dataset_root = data_config['dataset_root']
-        try:
-            data_in_use = data_config['data_in_use']  # [n], true or false
-        except:
-            data_in_use = None
+    def __dataset_parser(self, dataset_root, training, dataset_partition):
+      
+        data_in_use = None
 
-        with open(data_config['dataset_partition'], "rb") as f:
+        with open(dataset_partition, "rb") as f:
             partition = json.load(f)
         train_set = partition["TRAIN_SET"]
         test_set = partition["TEST_SET"]
