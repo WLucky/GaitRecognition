@@ -4,7 +4,7 @@ import torch
 from util_tools import is_dict, get_attr_from, get_valid_args, is_tensor, get_ddp_module
 from util_tools import Odict
 from util_tools import get_msg_mgr
-from losses import triplet
+from .losses.triplet import TripletLoss
 
 
 class TripletLossAggregator():
@@ -15,7 +15,7 @@ class TripletLossAggregator():
         Args:
             loss_cfg: Config of losses. List for multiple losses.
         """
-        self.loss_func = triplet(margin, loss_term_weight).cuda()
+        self.loss_func = TripletLoss(margin, loss_term_weight).cuda()
 
     def __call__(self, training_feats):
         """Compute the sum of all losses.

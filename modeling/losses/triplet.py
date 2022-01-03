@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from .base import BaseLoss, gather_and_scale_wrapper
+from .base import BaseLoss
 
 
 class TripletLoss(BaseLoss):

@@ -15,7 +15,6 @@ from datasets.sampler import TripletSampler, InferenceSampler
 from datasets.collate_fn import CollateFn
 from datasets.dataset import DataSet
 from datasets.transform import BaseSilCuttingTransform
-from modeling.loss_aggregator import LossAggregator
 from util_tools import get_valid_args, is_list, is_dict, np2var, ts2np, list2var, get_attr_from
 from util_tools import get_msg_mgr
 from util_tools import Odict, mkdir
@@ -28,7 +27,7 @@ def get_optimizer(model, args):
     optimizer = optim.Adam
     optimizer = optimizer(
         filter(lambda p: p.requires_grad, model.parameters()), 
-            lr = args.lr, momentum = args.momentum, weight_decay = args.weight_decay)
+            lr = args.lr, weight_decay = args.weight_decay)
     return optimizer
 
 def get_scheduler(optimizer, args):
@@ -63,6 +62,7 @@ def get_loader_for_test(args):
     train_dataset = DataSet(args.dataset_root, training = True, dataset_partition = args.dataset_partition, cache = False)
     test_dataset = DataSet(args.dataset_root, training = False, dataset_partition = args.dataset_partition, cache = False)
 
+    train_eval_sampler = InferenceSampler(train_dataset, args.test_batch)
     test_sampler = InferenceSampler(test_dataset, args.test_batch)
     '''
     batch_sampler: returns a batch of indices at a time
@@ -70,7 +70,7 @@ def get_loader_for_test(args):
     '''
     train_loader = tordata.DataLoader(
         dataset=train_dataset,
-        batch_sampler=test_sampler,
+        batch_sampler=train_eval_sampler,
         collate_fn=CollateFn(train_dataset.label_set, sample_type="all_ordered"),
         num_workers=1)
 
@@ -210,8 +210,7 @@ def run_test(model, test_loader):
 
 def get_save_path(args):
     dir = ""
-    if(args.fb):
-        dir_format = '{args.model}_{flag}'
+    dir_format = '{args.model}_{flag}'
 
     dir = dir_format.format(args = args, flag = hashlib.md5(str(args).encode('utf-8')).hexdigest()[:4])
     save_path = os.path.join(args.save_dir, dir)
