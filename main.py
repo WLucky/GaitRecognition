@@ -1,12 +1,10 @@
 
 import os
 import argparse
-from threading import get_ident
 import torch
 import torch.nn as nn
-from modeling import models
 from modeling.models.gaitpart import gaitPart
-from util_tools import config_loader, get_ddp_module, init_seeds, params_count, get_msg_mgr
+from util_tools import config_loader, init_seeds, params_count, get_msg_mgr
 from utils import run_train, run_test
 
 parser = argparse.ArgumentParser(description='Main program')
@@ -41,10 +39,6 @@ def initialization(cfgs, training):
 
 def run_model(cfgs, training):
     msg_mgr = get_msg_mgr()
-    model_cfg = cfgs['model_cfg']
-    msg_mgr.log_info(model_cfg)
-    # Model = getattr(models, model_cfg['model'])
-    # model = Model(cfgs, training)
     model = gaitPart()
     model.cuda()
     msg_mgr.log_info(params_count(model))
