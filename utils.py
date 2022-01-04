@@ -145,7 +145,7 @@ def train_step(optimizer, scheduler, Scaler, loss_sum, enable_float16 = True) ->
     scheduler.step()
     return True
 
-def save_ckpt(save_path, model, optimizer, scheduler, all_result, iteration):
+def save_ckpt(save_path, flag, model, optimizer, scheduler, all_result, iteration):
     mkdir(osp.join(save_path, "checkpoints/"))
     checkpoint = {
         'model': model.state_dict(),
@@ -154,8 +154,8 @@ def save_ckpt(save_path, model, optimizer, scheduler, all_result, iteration):
         'all_result': all_result,
         'iteration': iteration}
     torch.save(checkpoint,
-                osp.join(save_path, 'checkpoints/iter-{:0>5}.pt'.format(iteration)))
-                
+                osp.join(save_path, 'checkpoints/{}-iter{:0>5}.pt'.format(flag, iteration)))
+
 def data_visualization(save_path, all_result):
     mkdir(osp.join(save_path, "imgs/"))
     for type in ['nm', 'cl', 'bg']:
@@ -175,6 +175,21 @@ def data_visualization(save_path, all_result):
     plt.legend()
     plt.savefig(osp.join(save_path, 'imgs/test_acc.png'))
     plt.close()
+
+def data_visualization_swa(save_path, all_result):
+    mkdir(osp.join(save_path, "imgs/"))
+    for type in ['nm', 'cl', 'bg']:
+        key1 = "train_{}_acc".format(type)
+        key2 = "test_{}_acc".format(type)
+        key3 = "swa_test_{}_acc".format(type)
+
+        plt.plot(all_result['test_iterations'], all_result[key1], label=key1)
+        plt.plot(all_result['test_iterations'], all_result[key2], label=key2)
+        plt.plot(all_result['test_iterations'], all_result[key3], label=key3)
+
+        plt.legend()
+        plt.savefig(osp.join(save_path, 'imgs/swa_{}_acc.png'.format(type)))
+        plt.close()
 
 
 def inference(model, test_loader):
@@ -231,7 +246,7 @@ def run_test(model, test_loader):
 
 def get_save_path(args):
     dir = ""
-    dir_format = '{args.model}_{flag}'
+    dir_format = '{args.model}_iter{args.total_iter}_wd{args.weight_decay}_{flag}'
 
     dir = dir_format.format(args = args, flag = hashlib.md5(str(args).encode('utf-8')).hexdigest()[:4])
     save_path = os.path.join(args.save_dir, dir)
@@ -258,3 +273,60 @@ def get_acc_each_angle(result_dict):
     CL_acc = result_dict["scalar/test_accuracy/CL"]
 
     return de_diag(NM_acc, True), de_diag(BG_acc, True), de_diag(CL_acc, True)
+
+
+def moving_average(net1, net2, alpha=1):
+    for param1, param2 in zip(net1.parameters(), net2.parameters()):
+        param1.data *= (1.0 - alpha)
+        param1.data += param2.data * alpha
+
+def _check_bn(module, flag):
+    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
+        flag[0] = True
+
+def check_bn(model):
+    flag = [False]
+    model.apply(lambda module: _check_bn(module, flag))
+    return flag[0]
+
+def reset_bn(module):
+    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
+        module.running_mean = torch.zeros_like(module.running_mean)
+        module.running_var = torch.ones_like(module.running_var)
+
+def _get_momenta(module, momenta):
+    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
+        momenta[module] = module.momentum
+
+def _set_momenta(module, momenta):
+    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
+        module.momentum = momenta[module]
+
+def bn_update(loader, model):
+    """
+        BatchNorm buffers update (if any).
+        Performs 1 epochs to estimate buffers average using train dataset.
+
+        :param loader: train dataset loader for buffers average estimation.
+        :param model: model being update
+        :return: None
+    """
+    if not check_bn(model):
+        return
+    model.train()
+    momenta = {}
+    model.apply(reset_bn)
+    model.apply(lambda module: _get_momenta(module, momenta))
+    n = 0
+    for input, _ in loader:
+        input = input.cuda()
+        b = input.data.size(0)
+
+        momentum = b / (n + b)
+        for module in momenta.keys():
+            module.momentum = momentum
+
+        model(input)
+        n += b
+
+    model.apply(lambda module: _set_momenta(module, momenta))

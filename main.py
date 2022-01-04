@@ -23,17 +23,22 @@ parser.add_argument('--seed', default=1, type=int, help='random seed')
 parser.add_argument('--save_dir', type=str, default="result", help='The parent directory used to save the trained models')
 
 ############################## train config ################################
-parser.add_argument('--total_iter', type=int, default=6000, help="total iteration to train")
+parser.add_argument('--total_iter', type=int, default=20000, help="total iteration to train")
 parser.add_argument('--lr', default=0.0001, type=float, help='initial learning rate')
-parser.add_argument('--decreasing_lr', default='3000', help='decreasing strategy')
+parser.add_argument('--decreasing_lr', default='10000', help='decreasing strategy')
 parser.add_argument('--weight_decay', default=0.0, type=float, help='weight decay')
-parser.add_argument('--test_iter', type=int, default=500, help="iter to test")
+parser.add_argument('--test_iter', type=int, default=1000, help="iter to test")
 parser.add_argument('--train_batch', default='4,8', help='default: 4 label, 8 sample for each label')
 parser.add_argument('--test_batch', type=int, default='16', help='test sample batch')
 
 ############################## log config ################################
 parser.add_argument('--log_to_file', action='store_true', help="log to file")
 parser.add_argument('--log_iter', type=int, default=100, help="iter to log")
+
+########################## SWA setting ##########################
+parser.add_argument('--swa', action='store_true', help='swa usage flag (default: off)')
+parser.add_argument('--swa_start', type=float, default=5000, metavar='N', help='SWA start iteration number')
+parser.add_argument('--swa_c_iters', type=int, default=100, metavar='N', help='SWA model collection frequency/cycle length in iterations')
 
 
 
@@ -49,6 +54,12 @@ if __name__ == '__main__':
     model = gaitPart()
     model.cuda()
     msg_mgr.log_info(params_count(model))
+
+    if args.swa:
+        swa_model = gaitPart()
+        swa_model.cuda()
+        swa_n = 0  
+
     msg_mgr.log_info("Model Initialization Finished!")
     
     ########################## optimizer and scheduler ##########################
@@ -72,6 +83,13 @@ if __name__ == '__main__':
     all_result['test_bg_acc'] = []
     all_result['test_cl_acc'] = []
     all_result['test_iterations'] = []
+
+    if args.swa:
+        all_result['swa_test_nm_acc'] = []
+        all_result['swa_test_bg_acc'] = []
+        all_result['swa_test_cl_acc'] = []
+        all_result['swa_test_result'] = []
+
     for inputs in train_loader:
         ipts = inputs_pretreament(inputs, training = True)
         with autocast(enabled=True):
@@ -89,6 +107,11 @@ if __name__ == '__main__':
         visual_summary['scalar/learning_rate'] = optimizer.param_groups[0]['lr']
 
         msg_mgr.train_step(loss_info, visual_summary)
+
+        if args.swa and iteration >= args.swa_start and (iteration - args.swa_start) % args.swa_c_iters == 0:
+            # SWA
+            moving_average(swa_model, model, 1.0 / (swa_n + 1))
+            swa_n += 1
 
         ########################## testing process ##########################
         if iteration % args.test_iter == 0:
@@ -120,10 +143,29 @@ if __name__ == '__main__':
             all_result['test_cl_acc'].append(test_cl_acc)
             all_result['test_iterations'].append(iteration)
 
-            save_ckpt(save_path, model, optimizer, scheduler, all_result, iteration)
+            ####swa...
+            if args.swa and iteration >= args.swa_start:
+                msg_mgr.log_info("Eval for swa...")
+                swa_model.eval()
+                swa_test_result_dict = run_test(swa_model, test_loader)
+                swa_test_nm_acc, swa_test_bg_acc, swa_test_cl_acc = get_acc_info(swa_test_result_dict)
+
+                all_result['swa_test_nm_acc'].append("swa_test_nm_acc")
+                all_result['swa_test_bg_acc'].append("swa_test_bg_acc")
+                all_result['swa_test_cl_acc'].append("swa_test_cl_acc")
+                all_result['swa_test_result'].append("swa_test_result_dict")
+            elif args.swa:
+                all_result['swa_test_nm_acc'].append(test_nm_acc)
+                all_result['swa_test_bg_acc'].append(test_bg_acc)
+                all_result['swa_test_cl_acc'].append(test_cl_acc)
+                all_result['swa_test_result'].append(test_result_dict)
+
+            save_ckpt(save_path, "normal", model, optimizer, scheduler, all_result, iteration)
 
             #### drow img
             data_visualization(save_path, all_result)
+            if args.swa:
+                data_visualization_swa(save_path, all_result)
 
         if iteration >= args.total_iter:
             break
