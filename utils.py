@@ -250,8 +250,6 @@ def get_acc_info(result_dict):
     bg_acc2 = de_diag(BG_acc)
     cl_acc2 = de_diag(CL_acc)
 
-    result = {}
-
     return nm_acc2, bg_acc2, cl_acc2
 
 def get_acc_each_angle(result_dict):
