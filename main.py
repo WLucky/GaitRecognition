@@ -61,6 +61,17 @@ if __name__ == '__main__':
     ########################## training process ##########################
     iteration = 0
     model.train()
+
+    all_result = {}
+    all_result['train_result'] = []
+    all_result['test_result'] = []
+    all_result['train_nm_acc'] = []
+    all_result['train_bg_acc'] = []
+    all_result['train_cl_acc'] = []
+    all_result['test_nm_acc'] = []
+    all_result['test_bg_acc'] = []
+    all_result['test_cl_acc'] = []
+    all_result['test_iterations'] = []
     for inputs in train_loader:
         ipts = inputs_pretreament(inputs, training = True)
         with autocast(enabled=True):
@@ -80,18 +91,6 @@ if __name__ == '__main__':
         msg_mgr.train_step(loss_info, visual_summary)
 
         ########################## testing process ##########################
-        all_result = {}
-        all_result['train_result'] = []
-        all_result['test_result'] = []
-        all_result['train_nm_acc'] = []
-        all_result['train_bg_acc'] = []
-        all_result['train_cl_acc'] = []
-        all_result['test_nm_acc'] = []
-        all_result['test_bg_acc'] = []
-        all_result['test_cl_acc'] = []
-        all_result['test_iterations'] = []
-
-
         if iteration % args.test_iter == 0:
             # save the checkpoint
             msg_mgr.log_info("Running test...")
