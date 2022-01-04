@@ -150,10 +150,10 @@ if __name__ == '__main__':
                 swa_test_result_dict = run_test(swa_model, test_loader)
                 swa_test_nm_acc, swa_test_bg_acc, swa_test_cl_acc = get_acc_info(swa_test_result_dict)
 
-                all_result['swa_test_nm_acc'].append("swa_test_nm_acc")
-                all_result['swa_test_bg_acc'].append("swa_test_bg_acc")
-                all_result['swa_test_cl_acc'].append("swa_test_cl_acc")
-                all_result['swa_test_result'].append("swa_test_result_dict")
+                all_result['swa_test_nm_acc'].append(swa_test_nm_acc)
+                all_result['swa_test_bg_acc'].append(swa_test_bg_acc)
+                all_result['swa_test_cl_acc'].append(swa_test_cl_acc)
+                all_result['swa_test_result'].append(swa_test_result_dict)
             elif args.swa:
                 all_result['swa_test_nm_acc'].append(test_nm_acc)
                 all_result['swa_test_bg_acc'].append(test_bg_acc)
