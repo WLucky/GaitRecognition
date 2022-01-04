@@ -8,8 +8,7 @@ import os.path as osp
 from tqdm import tqdm
 import hashlib
 import os
-import pdb
-
+import matplotlib.pyplot as plt
 
 from datasets.sampler import TripletSampler, InferenceSampler
 from datasets.collate_fn import CollateFn
@@ -19,6 +18,7 @@ from util_tools import get_valid_args, is_list, is_dict, np2var, ts2np, list2var
 from util_tools import get_msg_mgr
 from util_tools import Odict, mkdir
 from util_tools import evaluation as eval_functions
+from util_tools.evaluation import de_diag
 
 
 msg_mgr = get_msg_mgr()
@@ -145,16 +145,29 @@ def train_step(optimizer, scheduler, Scaler, loss_sum, enable_float16 = True) ->
     scheduler.step()
     return True
 
-def save_ckpt(save_path, model, optimizer, scheduler,  iteration, engine_cfg):
+def save_ckpt(save_path, model, optimizer, scheduler, all_result, iteration):
     mkdir(osp.join(save_path, "checkpoints/"))
-    save_name = engine_cfg['save_name']
     checkpoint = {
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
         'scheduler': scheduler.state_dict(),
+        'all_result': all_result,
         'iteration': iteration}
     torch.save(checkpoint,
-                osp.join(save_path, 'checkpoints/{}-{:0>5}.pt'.format(save_name, iteration)))
+                osp.join(save_path, 'checkpoints/iter-{:0>5}.pt'.format(iteration)))
+                
+def data_visualization(save_path, all_result):
+    mkdir(osp.join(save_path, "imgs/"))
+    for type in ['nm', 'cl', 'bg']:
+        key1 = "train_{}_acc".format(type)
+        key2 = "test_{}_acc".format(type)
+
+        plt.plot(all_result[key1], label=key1)
+        plt.plot(all_result[key2], label=key2)
+        plt.legend()
+        plt.savefig(osp.join(save_path, 'imgs/{}_acc.png'.format(type)))
+        plt.close()
+    
 
 def inference(model, test_loader):
     """Inference all the test data.
@@ -215,3 +228,27 @@ def get_save_path(args):
     dir = dir_format.format(args = args, flag = hashlib.md5(str(args).encode('utf-8')).hexdigest()[:4])
     save_path = os.path.join(args.save_dir, dir)
     return save_path
+
+def get_acc_info(result_dict):
+    NM_acc = result_dict["scalar/test_accuracy/NM"]
+    BG_acc = result_dict["scalar/test_accuracy/BG"]
+    CL_acc = result_dict["scalar/test_accuracy/CL"]
+    # nm_acc = np.mean(NM_acc)
+    # bg_acc = np.mean(BG_acc)
+    # cl_acc = np.mean(CL_acc)
+
+    ##### acc exclude identical view
+    nm_acc2 = de_diag(NM_acc)
+    bg_acc2 = de_diag(BG_acc)
+    cl_acc2 = de_diag(CL_acc)
+
+    result = {}
+
+    return nm_acc2, bg_acc2, cl_acc2
+
+def get_acc_each_angle(result_dict):
+    NM_acc = result_dict["scalar/test_accuracy/NM"]
+    BG_acc = result_dict["scalar/test_accuracy/BG"]
+    CL_acc = result_dict["scalar/test_accuracy/CL"]
+
+    return de_diag(NM_acc, True), de_diag(BG_acc, True), de_diag(CL_acc, True)

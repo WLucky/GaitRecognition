@@ -23,12 +23,11 @@ parser.add_argument('--seed', default=1, type=int, help='random seed')
 parser.add_argument('--save_dir', type=str, default="result", help='The parent directory used to save the trained models')
 
 ############################## train config ################################
-parser.add_argument('--total_iter', type=int, default=20000, help="total iteration to train")
+parser.add_argument('--total_iter', type=int, default=6000, help="total iteration to train")
 parser.add_argument('--lr', default=0.0001, type=float, help='initial learning rate')
-parser.add_argument('--decreasing_lr', default='10000,15000', help='decreasing strategy')
-parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
+parser.add_argument('--decreasing_lr', default='3000', help='decreasing strategy')
 parser.add_argument('--weight_decay', default=0.0, type=float, help='weight decay')
-parser.add_argument('--test_iter', type=int, default=200, help="iter to test")
+parser.add_argument('--test_iter', type=int, default=500, help="iter to test")
 parser.add_argument('--train_batch', default='4,8', help='default: 4 label, 8 sample for each label')
 parser.add_argument('--test_batch', type=int, default='16', help='test sample batch')
 
@@ -81,18 +80,42 @@ if __name__ == '__main__':
         msg_mgr.train_step(loss_info, visual_summary)
 
         ########################## testing process ##########################
+        all_result = {}
+        all_result['train_result'] = []
+        all_result['test_result'] = []
+        all_result['train_nm_acc'] = []
+        all_result['train_bg_acc'] = []
+        all_result['train_cl_acc'] = []
+        all_result['test_nm_acc'] = []
+        all_result['test_bg_acc'] = []
+        all_result['test_cl_acc'] = []
 
         if iteration % args.test_iter == 0:
             # save the checkpoint
-            # save_ckpt(save_path, model, optimizer, scheduler,  iteration, engine_cfg)
             msg_mgr.log_info("Running test...")
             model.eval()
             msg_mgr.log_info("Eval for train dataset...")
-            result_dict = run_test(model, train_eval_loader)
+            train_result_dict = run_test(model, train_eval_loader)
             msg_mgr.log_info("Eval for test dataset...")
-            result_dict = run_test(model, test_loader)
+            test_result_dict = run_test(model, test_loader)
             model.train()
             msg_mgr.reset_time()
             
+            #### save data
+            all_result['train_result'].append(train_result_dict)
+            all_result['test_result'].append(test_result_dict)
+            train_nm_acc, train_bg_acc, train_cl_acc = get_acc_info(train_result_dict)
+            test_nm_acc, test_bg_acc, test_cl_acc = get_acc_info(test_result_dict)
+            all_result['train_nm_acc'].append(train_nm_acc)
+            all_result['train_bg_acc'].append(train_bg_acc)
+            all_result['train_cl_acc'].append(train_cl_acc)
+            all_result['test_nm_acc'].append(test_nm_acc)
+            all_result['test_bg_acc'].append(test_bg_acc)
+            all_result['test_cl_acc'].append(test_cl_acc)
+            save_ckpt(save_path, model, optimizer, scheduler, all_result, iteration)
+
+            #### drow img
+            data_visualization(save_path, all_result)
+
         if iteration >= args.total_iter:
             break
