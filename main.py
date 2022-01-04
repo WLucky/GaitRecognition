@@ -7,7 +7,6 @@ from modeling.models.gaitpart import gaitPart
 from modeling.loss_aggregator import TripletLossAggregator
 from util_tools import config_loader, init_seeds, params_count, get_msg_mgr
 from utils import *
-import pdb
 
 
 parser = argparse.ArgumentParser(description='Main program')
@@ -90,7 +89,6 @@ if __name__ == '__main__':
             model.eval()
             msg_mgr.log_info("Eval for train dataset...")
             result_dict = run_test(model, train_eval_loader)
-            pdb.set_trace()
             msg_mgr.log_info("Eval for test dataset...")
             result_dict = run_test(model, test_loader)
             model.train()
