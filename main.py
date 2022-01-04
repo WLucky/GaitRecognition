@@ -29,7 +29,7 @@ parser.add_argument('--decreasing_lr', default='3000', help='decreasing strategy
 parser.add_argument('--weight_decay', default=0.0, type=float, help='weight decay')
 parser.add_argument('--test_iter', type=int, default=500, help="iter to test")
 parser.add_argument('--train_batch', default='4,8', help='default: 4 label, 8 sample for each label')
-parser.add_argument('--test_batch', default='16', help='test sample batch')
+parser.add_argument('--test_batch', type=int, default='16', help='test sample batch')
 
 ############################## log config ################################
 parser.add_argument('--log_to_file', action='store_true', help="log to file")
@@ -45,8 +45,6 @@ if __name__ == '__main__':
     msg_mgr = get_msg_mgr()
     msg_mgr.init_manager(save_path, args.log_to_file, args.log_iter, 0)
     msg_mgr.log_info(args)
-
-    cfgs = config_loader(args.cfgs)
 
     model = gaitPart()
     model.cuda()

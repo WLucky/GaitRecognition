@@ -3,6 +3,7 @@ import torch.nn as nn
 from ..modules import SetBlockWrapper, HorizontalPoolingPyramid, PackSequenceWrapper, SeparateFCs
 from ..modules import BasicConv2d, FocalConv2d
 from util_tools import clones
+import pdb
 
 
 class BasicConv1d(nn.Module):
@@ -125,18 +126,16 @@ class GaitPart(nn.Module):
      
     def forward(self, inputs):
         ipts, labs, _, _, seqL = inputs
-
-        sils = ipts[0]
+        sils = ipts[0]  #torch.Size([32, 30, 64, 44])
         if len(sils.size()) == 4:
-            sils = sils.unsqueeze(2)
+            sils = sils.unsqueeze(2) #torch.Size([32, 30, 1, 64, 44])
 
         del ipts
-        out = self.Backbone(sils)  # [n, s, c, h, w]
-        out = self.HPP(out)  # [n, s, c, p]
-        out = self.TFA(out, seqL)  # [n, p, c]
-
+        out = self.Backbone(sils)  # [n, s, c, h, w]  torch.Size([32, 30, 128, 16, 11])
+        out = self.HPP(out)  # [n, s, c, p]  torch.Size([32, 30, 128, 16])
+        out = self.TFA(out, seqL)  # [n, p, c] torch.Size([32, 16, 128])
         embs = self.Head(out.permute(1, 0, 2).contiguous())  # [p, n, c]
-        embs = embs.permute(1, 0, 2).contiguous()  # [n, p, c]
+        embs = embs.permute(1, 0, 2).contiguous()  # [n, p, c] torch.Size([32, 16, 128])
 
         n, s, _, h, w = sils.size()
         retval = {
