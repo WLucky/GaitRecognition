@@ -162,12 +162,20 @@ def data_visualization(save_path, all_result):
         key1 = "train_{}_acc".format(type)
         key2 = "test_{}_acc".format(type)
 
-        plt.plot(all_result[key1], label=key1)
-        plt.plot(all_result[key2], label=key2)
+        plt.plot(all_result['test_iterations'], all_result[key1], label=key1)
+        plt.plot(all_result['test_iterations'], all_result[key2], label=key2)
         plt.legend()
         plt.savefig(osp.join(save_path, 'imgs/{}_acc.png'.format(type)))
         plt.close()
-    
+
+    for type in ['nm', 'cl', 'bg']:
+        key2 = "test_{}_acc".format(type)
+        plt.plot(all_result['test_iterations'], all_result[key2], label=key2)
+
+    plt.legend()
+    plt.savefig(osp.join(save_path, 'imgs/test_acc.png'))
+    plt.close()
+
 
 def inference(model, test_loader):
     """Inference all the test data.

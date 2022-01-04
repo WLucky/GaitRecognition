@@ -89,6 +89,8 @@ if __name__ == '__main__':
         all_result['test_nm_acc'] = []
         all_result['test_bg_acc'] = []
         all_result['test_cl_acc'] = []
+        all_result['test_iterations'] = []
+
 
         if iteration % args.test_iter == 0:
             # save the checkpoint
@@ -101,17 +103,24 @@ if __name__ == '__main__':
             model.train()
             msg_mgr.reset_time()
             
+            train_nm_acc, train_bg_acc, train_cl_acc = get_acc_info(train_result_dict)
+            test_nm_acc, test_bg_acc, test_cl_acc = get_acc_info(test_result_dict)
+
+            #### gap
+            msg_mgr.log_info("Gap Info:\tNM: %.3f,\tBG: %.3f,\tCL: %.3f" 
+                %(train_nm_acc - test_nm_acc, train_bg_acc - test_bg_acc, train_cl_acc - test_cl_acc))
+
             #### save data
             all_result['train_result'].append(train_result_dict)
             all_result['test_result'].append(test_result_dict)
-            train_nm_acc, train_bg_acc, train_cl_acc = get_acc_info(train_result_dict)
-            test_nm_acc, test_bg_acc, test_cl_acc = get_acc_info(test_result_dict)
             all_result['train_nm_acc'].append(train_nm_acc)
             all_result['train_bg_acc'].append(train_bg_acc)
             all_result['train_cl_acc'].append(train_cl_acc)
             all_result['test_nm_acc'].append(test_nm_acc)
             all_result['test_bg_acc'].append(test_bg_acc)
             all_result['test_cl_acc'].append(test_cl_acc)
+            all_result['test_iterations'].append(iteration)
+
             save_ckpt(save_path, model, optimizer, scheduler, all_result, iteration)
 
             #### drow img
