@@ -14,6 +14,7 @@ parser = argparse.ArgumentParser(description='Main program')
 parser.add_argument('--cache', action='store_true', help="cache the dataset")
 parser.add_argument('--dataset_root', type=str, help='location of the data corpus', required=True)
 parser.add_argument('--dataset_partition', type=str, default="./partitions/partition.json", help='The path of partition config:trian set and test set')
+parser.add_argument('--random_crop', action='store_true', help="use random crop transform in train dataset")
 
 ############################## model config ##############################
 parser.add_argument('--model', type=str, default='gaitpart', help="type of model")
@@ -91,7 +92,7 @@ if __name__ == '__main__':
         all_result['swa_test_result'] = []
 
     for inputs in train_loader:
-        ipts = inputs_pretreament(inputs, training = True)
+        ipts = inputs_pretreament(inputs, training = True, random_crop = args.random_crop)
         with autocast(enabled=True):
             retval = model(ipts)
             training_feat, visual_summary = retval['training_feat'], retval['visual_summary']
