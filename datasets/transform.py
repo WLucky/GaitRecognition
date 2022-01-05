@@ -1,3 +1,5 @@
+import pdb
+
 from datasets import transform as base_transform
 import numpy as np
 import random
@@ -50,13 +52,13 @@ class RandomCropTransform():
         else:
             cutting = int(self.img_w // 64) * 10
         # padding
-        c, h , w = x.shape()
+        c, h, w = x.shape
         out_h, out_w = h, w - 2 * cutting
         x = np.pad(x, ((0, 0), (self.padding, self.padding), (self.padding, self.padding)), 'constant', constant_values=0)
         #random crop
-        c, h , w = x.shape()
-        i = random.randint(0, h - out_h + 1)
-        j = random.randint(0, w - out_w + 1)
+        c, h, w = x.shape
+        i = random.randint(0, h - out_h)
+        j = random.randint(0, w - out_w)
 
         x = x[..., i: i + out_h, j: j + out_w]
         return x / self.disvor
