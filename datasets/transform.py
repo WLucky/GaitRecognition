@@ -52,11 +52,7 @@ class RandomCropTransform():
         # padding
         c, h , w = x.shape()
         out_h, out_w = h, w - 2 * cutting
-        _ = np.zeros((x.shape(0), x.shape(1), self.padding))
-        x = np.concatenate([_, x, _], axis = -1)
-        _ = np.zeros((x.shape(0), self.padding, x.shape(2)))
-        x = np.concatenate([_, x, _], axis = -2)
-
+        x = np.pad(x, ((0, 0), (self.padding, self.padding), (self.padding, self.padding)), 'constant', constant_values=0)
         #random crop
         c, h , w = x.shape()
         i = random.randint(0, h - out_h + 1)
