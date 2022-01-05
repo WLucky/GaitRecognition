@@ -1,5 +1,6 @@
 from datasets import transform as base_transform
 import numpy as np
+import random
 
 from util_tools import is_list, is_dict, get_valid_args
 
@@ -36,6 +37,33 @@ class BaseSilCuttingTransform():
         x = x[..., cutting:-cutting]
         return x / self.disvor
 
+class RandomCropTransform():
+    def __init__(self, img_w=64, padding=4, disvor=255.0, cutting=None):
+        self.img_w = img_w
+        self.disvor = disvor
+        self.cutting = cutting
+        self.padding = padding
+
+    def __call__(self, x):
+        if self.cutting is not None:
+            cutting = self.cutting
+        else:
+            cutting = int(self.img_w // 64) * 10
+        # padding
+        c, h , w = x.shape()
+        out_h, out_w = h, w - 2 * cutting
+        _ = np.zeros((x.shape(0), x.shape(1), self.padding))
+        x = np.concatenate([_, x, _], axis = -1)
+        _ = np.zeros((x.shape(0), self.padding, x.shape(2)))
+        x = np.concatenate([_, x, _], axis = -2)
+
+        #random crop
+        c, h , w = x.shape()
+        i = random.randint(0, h - out_h + 1)
+        j = random.randint(0, w - out_w + 1)
+
+        x = x[..., i: i + out_h, j: j + out_w]
+        return x / self.disvor
 
 class BaseRgbTransform():
     def __init__(self, mean=None, std=None):

@@ -15,7 +15,7 @@ from torchvision import transforms
 from datasets.sampler import TripletSampler, InferenceSampler
 from datasets.collate_fn import CollateFn
 from datasets.dataset import DataSet
-from datasets.transform import BaseSilCuttingTransform
+from datasets.transform import BaseSilCuttingTransform, RandomCropTransform
 from util_tools import get_valid_args, is_list, is_dict, np2var, ts2np, list2var, get_attr_from
 from util_tools import get_msg_mgr
 from util_tools import Odict, mkdir
@@ -95,10 +95,7 @@ def inputs_pretreament(inputs, training, random_crop = False):
     seq_trfs = [BaseSilCuttingTransform()]
 
     if training and random_crop:
-        train_transform = transforms.Compose([
-            transforms.RandomCrop((64, 44), padding=4),
-        ])
-        seq_trfs = [train_transform]
+        seq_trfs = [RandomCropTransform()]
 
     requires_grad = bool(training)
     seqs = [np2var(np.asarray([trf(fra) for fra in seq]), requires_grad=requires_grad).float()
