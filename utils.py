@@ -9,6 +9,8 @@ from tqdm import tqdm
 import hashlib
 import os
 import matplotlib.pyplot as plt
+from torchvision import transforms
+
 
 from datasets.sampler import TripletSampler, InferenceSampler
 from datasets.collate_fn import CollateFn
@@ -81,7 +83,7 @@ def get_loader_for_test(args):
         num_workers=1)
     return train_loader, test_loader
 
-def inputs_pretreament(inputs, training):
+def inputs_pretreament(inputs, training, random_crop = False):
     """Conduct transforms on input data.
 
     Args:
@@ -91,6 +93,12 @@ def inputs_pretreament(inputs, training):
     """
     seqs_batch, labs_batch, typs_batch, vies_batch, seqL_batch = inputs
     seq_trfs = [BaseSilCuttingTransform()]
+
+    if training and random_crop:
+        train_transform = transforms.Compose([
+            transforms.RandomCrop((64, 44), padding=4),
+        ])
+        seq_trfs = [train_transform]
 
     requires_grad = bool(training)
     seqs = [np2var(np.asarray([trf(fra) for fra in seq]), requires_grad=requires_grad).float()
@@ -247,6 +255,8 @@ def run_test(model, test_loader):
 def get_save_path(args):
     dir = ""
     dir_format = '{args.model}_iter{args.total_iter}_wd{args.weight_decay}_{flag}'
+    if args.random_crop:
+        dir_format = "random_crop_" + dir_format
 
     dir = dir_format.format(args = args, flag = hashlib.md5(str(args).encode('utf-8')).hexdigest()[:4])
     save_path = os.path.join(args.save_dir, dir)
