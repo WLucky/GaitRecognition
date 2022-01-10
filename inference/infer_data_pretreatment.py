@@ -8,6 +8,9 @@ from time import sleep
 import argparse
 import pickle
 
+# from multiprocessing import Pool
+# from multiprocessing import TimeoutError as MP_TimeoutError
+
 START = "START"
 FINISH = "FINISH"
 WARNING = "WARNING"
@@ -163,17 +166,14 @@ print('Pretreatment Start.\n'
       'Worker num: %d' % (
           INPUT_PATH, OUTPUT_PATH, LOG_PATH, WORKERS))
 
-id_list = os.listdir(INPUT_PATH)
-id_list.sort()
+type_list = os.listdir(INPUT_PATH) #gallary probe
+type_list.sort()
 # Walk the input path
-for _id in id_list:
-    seq_type = os.listdir(os.path.join(INPUT_PATH, _id))
-    seq_type.sort()
-    for _seq_type in seq_type:
-        view = os.listdir(os.path.join(INPUT_PATH, _id, _seq_type))
-        view.sort()
-        for _view in view:
-            seq_info = [_id, _seq_type, _view]
-            out_dir = os.path.join(OUTPUT_PATH, *seq_info)
-            cut_pickle(seq_info, 0)
+for type in type_list:
+    labels = os.listdir(os.path.join(INPUT_PATH, type))
+    labels.sort()
+    for label in labels:
+        seq_info = [type, label]
+        out_dir = os.path.join(OUTPUT_PATH, *seq_info)
+        cut_pickle(seq_info, 0)
 
