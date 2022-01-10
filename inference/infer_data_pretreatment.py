@@ -7,6 +7,7 @@ from warnings import warn
 from time import sleep
 import argparse
 import pickle
+import pdb
 
 # from multiprocessing import Pool
 # from multiprocessing import TimeoutError as MP_TimeoutError
@@ -52,7 +53,8 @@ T_W = opt.img_size
 
 def log2str(pid, comment, logs):
     str_log = ''
-    if type(logs) is str:
+    # pdb.set_trace()
+    if isinstance(logs, str):
         logs = [logs]
     for log in logs:
         str_log += "# JOB %d : --%s-- %s\n" % (

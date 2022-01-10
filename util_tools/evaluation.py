@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from util_tools import get_msg_mgr
+import pdb
 
 
 def cuda_dist(x, y, metric='euc'):
@@ -106,8 +107,8 @@ def infer_identification(gallary_info_dict, probe_info_dict, metric='euc'):
     gallary_feature, gallary_label = gallary_info_dict['embeddings'], gallary_info_dict['labels']
     probe_feature, probe_label = probe_info_dict['embeddings'], probe_info_dict['labels']
     gallary_label, probe_label = np.array(gallary_label), np.array(probe_label)
-
     num_rank = 1
+    infer_y = np.zeros([len(probe_label), num_rank]) - 1.
     gallery_x = gallary_feature
     gallery_y = gallary_label
     probe_x = probe_feature
@@ -115,9 +116,9 @@ def infer_identification(gallary_info_dict, probe_info_dict, metric='euc'):
 
     dist = cuda_dist(probe_x, gallery_x, metric)
     idx = dist.sort(1)[1].cpu().numpy()
-    infer_y = gallery_y[idx[:, 0:num_rank]]
+    infer_y[:, 0:num_rank] = gallery_y[idx[:, 0:num_rank]]
 
-    return probe_y, infer_y
+    return np.expand_dims(probe_y, axis=1), infer_y
 
 
 def identification_real_scene(data, dataset, metric='euc'):
