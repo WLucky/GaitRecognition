@@ -102,6 +102,24 @@ def identification(data, metric='euc'):
     return result_dict
 
 
+def infer_identification(gallary_info_dict, probe_info_dict, metric='euc'):
+    gallary_feature, gallary_label = gallary_info_dict['embeddings'], gallary_info_dict['labels']
+    probe_feature, probe_label = probe_info_dict['embeddings'], probe_info_dict['labels']
+    gallary_label, probe_label = np.array(gallary_label), np.array(probe_label)
+
+    num_rank = 1
+    gallery_x = gallary_feature
+    gallery_y = gallary_label
+    probe_x = probe_feature
+    probe_y = probe_label
+
+    dist = cuda_dist(probe_x, gallery_x, metric)
+    idx = dist.sort(1)[1].cpu().numpy()
+    infer_y = gallery_y[idx[:, 0:num_rank]]
+
+    return probe_y, infer_y
+
+
 def identification_real_scene(data, dataset, metric='euc'):
     msg_mgr = get_msg_mgr()
     feature, label, seq_type = data['embeddings'], data['labels'], data['types']

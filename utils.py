@@ -10,17 +10,20 @@ import hashlib
 import os
 import matplotlib.pyplot as plt
 from torchvision import transforms
+import pandas as pd
 
 
 from datasets.sampler import TripletSampler, InferenceSampler
 from datasets.collate_fn import CollateFn
-from datasets.dataset import DataSet
+from datasets.dataset import DataSet, InferenceDataSet
 from datasets.transform import BaseSilCuttingTransform, RandomCropTransform
 from util_tools import get_valid_args, is_list, is_dict, np2var, ts2np, list2var, get_attr_from
 from util_tools import get_msg_mgr
 from util_tools import Odict, mkdir
 from util_tools import evaluation as eval_functions
 from util_tools.evaluation import de_diag
+from modeling.models.gaitpart import gaitPart
+
 
 
 msg_mgr = get_msg_mgr()
@@ -82,6 +85,29 @@ def get_loader_for_test(args):
         collate_fn=CollateFn(test_dataset.label_set, sample_type="all_ordered"),
         num_workers=1)
     return train_loader, test_loader
+
+def get_loader_for_infer(data_path):
+    gallary_dataset = InferenceDataSet(data_path, gallary = True, cache = False)
+    probe_dataset = InferenceDataSet(data_path, gallary = False, cache = False)
+
+    train_eval_sampler = InferenceSampler(gallary_dataset, 16)
+    test_sampler = InferenceSampler(probe_dataset, 16)
+    '''
+    batch_sampler: returns a batch of indices at a time
+    collate_fn: merges a list of samples to form a mini-batch of Tensor(s)
+    '''
+    gallary_loader = tordata.DataLoader(
+        dataset=gallary_dataset,
+        batch_sampler=train_eval_sampler,
+        collate_fn=CollateFn(gallary_dataset.label_set, sample_type="all_ordered"),
+        num_workers=1)
+
+    probe_loader = tordata.DataLoader(
+        dataset=probe_dataset,
+        batch_sampler=test_sampler,
+        collate_fn=CollateFn(probe_dataset.label_set, sample_type="all_ordered"),
+        num_workers=1)
+    return gallary_loader, probe_loader
 
 def inputs_pretreament(inputs, training, random_crop = False):
     """Conduct transforms on input data.
@@ -249,6 +275,35 @@ def run_test(model, test_loader):
         eval_func = eval_functions.identification
         return eval_func(info_dict)
 
+def run_inference(model, gallary_loader, probe_loader):
+    """Accept the instance object(model) here, and then run the test loop."""
+
+    with torch.no_grad():
+        gallary_info_dict = inference(model, gallary_loader)
+        label_list = gallary_loader.dataset.label_list
+        gallary_info_dict.update({'labels': label_list})
+        
+        probe_info_dict = inference(model, gallary_loader)
+        label_list = probe_loader.dataset.label_list
+        probe_info_dict.update({'labels': label_list})
+
+        eval_func = eval_functions.infer_identification
+        return eval_func(gallary_info_dict, probe_info_dict)
+
+def infer_to_CSV(model_path, data_path):
+    checkpoint_path = osp.join(model_path, "checkpoints", "iter-20000.pt")
+    checkpoint = torch.load(checkpoint_path, map_location = torch.device('cuda:0'))
+    model = gaitPart()
+    model.cuda()
+    model.load_state_dict(checkpoint['state_dict'])
+
+    gallary_loader, probe_loader = get_loader_for_infer(data_path)
+    probe_y, infer_y = run_inference(model, gallary_loader, probe_loader)
+    result = np.concatenate((probe_y, infer_y), axis = 1)
+    df = pd.DataFrame(result)
+    df.to_csv(osp.join(data_path, "infer_result.csv"))
+
+
 def get_save_path(args):
     dir = ""
     dir_format = '{args.model}_iter{args.total_iter}_wd{args.weight_decay}_{flag}'
@@ -286,54 +341,3 @@ def moving_average(net1, net2, alpha=1):
     for param1, param2 in zip(net1.parameters(), net2.parameters()):
         param1.data *= (1.0 - alpha)
         param1.data += param2.data * alpha
-
-def _check_bn(module, flag):
-    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
-        flag[0] = True
-
-def check_bn(model):
-    flag = [False]
-    model.apply(lambda module: _check_bn(module, flag))
-    return flag[0]
-
-def reset_bn(module):
-    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
-        module.running_mean = torch.zeros_like(module.running_mean)
-        module.running_var = torch.ones_like(module.running_var)
-
-def _get_momenta(module, momenta):
-    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
-        momenta[module] = module.momentum
-
-def _set_momenta(module, momenta):
-    if issubclass(module.__class__, torch.nn.modules.batchnorm._BatchNorm):
-        module.momentum = momenta[module]
-
-def bn_update(loader, model):
-    """
-        BatchNorm buffers update (if any).
-        Performs 1 epochs to estimate buffers average using train dataset.
-
-        :param loader: train dataset loader for buffers average estimation.
-        :param model: model being update
-        :return: None
-    """
-    if not check_bn(model):
-        return
-    model.train()
-    momenta = {}
-    model.apply(reset_bn)
-    model.apply(lambda module: _get_momenta(module, momenta))
-    n = 0
-    for input, _ in loader:
-        input = input.cuda()
-        b = input.data.size(0)
-
-        momentum = b / (n + b)
-        for module in momenta.keys():
-            module.momentum = momentum
-
-        model(input)
-        n += b
-
-    model.apply(lambda module: _set_momenta(module, momenta))
