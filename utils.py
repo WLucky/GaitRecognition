@@ -1,3 +1,5 @@
+import pdb
+
 import numpy as np
 import torch
 from torch.cuda.amp import autocast
@@ -90,21 +92,21 @@ def get_loader_for_infer(data_path):
     gallary_dataset = InferenceDataSet(data_path, gallary = True, cache = False)
     probe_dataset = InferenceDataSet(data_path, gallary = False, cache = False)
 
-    train_eval_sampler = InferenceSampler(gallary_dataset, 16)
-    test_sampler = InferenceSampler(probe_dataset, 16)
+    gallary_sampler = InferenceSampler(gallary_dataset, 16)
+    probe_sampler = InferenceSampler(probe_dataset, 16)
     '''
     batch_sampler: returns a batch of indices at a time
     collate_fn: merges a list of samples to form a mini-batch of Tensor(s)
     '''
     gallary_loader = tordata.DataLoader(
         dataset=gallary_dataset,
-        batch_sampler=train_eval_sampler,
+        batch_sampler=gallary_sampler,
         collate_fn=CollateFn(gallary_dataset.label_set, sample_type="all_ordered"),
         num_workers=1)
 
     probe_loader = tordata.DataLoader(
         dataset=probe_dataset,
-        batch_sampler=test_sampler,
+        batch_sampler=probe_sampler,
         collate_fn=CollateFn(probe_dataset.label_set, sample_type="all_ordered"),
         num_workers=1)
     return gallary_loader, probe_loader
@@ -236,6 +238,7 @@ def inference(model, test_loader):
     batch_size = test_loader.batch_sampler.batch_size
     rest_size = total_size
     info_dict = Odict()
+    # pdb.set_trace()
     for inputs in test_loader:
         ipts = inputs_pretreament(inputs, training=False)
         with autocast(enabled=False):
@@ -283,7 +286,7 @@ def run_inference(model, gallary_loader, probe_loader):
         label_list = gallary_loader.dataset.label_list
         gallary_info_dict.update({'labels': label_list})
         
-        probe_info_dict = inference(model, gallary_loader)
+        probe_info_dict = inference(model, probe_loader)
         label_list = probe_loader.dataset.label_list
         probe_info_dict.update({'labels': label_list})
 
@@ -291,11 +294,11 @@ def run_inference(model, gallary_loader, probe_loader):
         return eval_func(gallary_info_dict, probe_info_dict)
 
 def infer_to_CSV(model_path, data_path):
-    checkpoint_path = osp.join(model_path, "checkpoints", "iter-20000.pt")
+    checkpoint_path = osp.join(model_path, "checkpoints", "normal-iter20000.pt")
     checkpoint = torch.load(checkpoint_path, map_location = torch.device('cuda:0'))
     model = gaitPart()
     model.cuda()
-    model.load_state_dict(checkpoint['state_dict'])
+    model.load_state_dict(checkpoint['model'])
 
     gallary_loader, probe_loader = get_loader_for_infer(data_path)
     probe_y, infer_y = run_inference(model, gallary_loader, probe_loader)

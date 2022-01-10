@@ -64,7 +64,7 @@ class InferenceDataSet(tordata.Dataset):
         else:
             data_path = os.path.join(dataset_root, "probe")
 
-        labels = os.listdir()
+        labels = os.listdir(data_path)
 
         msg_mgr = get_msg_mgr()
 
