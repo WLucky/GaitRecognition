@@ -3,6 +3,8 @@
 ## Experiment Results
 Test accuracy of carry bag(**BG**),wear clothes(**CL**),normal(**NM**)
 
+**Fianl test acc NM: 91.818,	BG: 86.534,	CL: 69.451**
+
 ![](https://github.com/WLucky/GaitRecognition/blob/main/Figs/test_acc.png)
 
 ## Train
